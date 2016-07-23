@@ -65,11 +65,11 @@ class Player(object):
             if voice_client:
                 if playlist[0].location:
                     if not self.is_playing:
-                        self.media_player = voice_client.create_ffmpeg_player(playlist[0].location, after=self.on_song_finished)
+                        self.media_player = voice_client.create_ffmpeg_player(playlist[0].location,
+                                                                              after=self.on_song_finished)
                         self.media_player.volume = 0.3
                         self.media_player.start()
                         self.is_playing = playlist[0]
-                        self.update_queue_file()
                 else:
                     print('\nWaiting for song to download...')
             else:
@@ -150,7 +150,8 @@ class Downloader(object):
                         yt_downloader.downloadSong(song.url)
                         os.rename(song.id, 'cache/audio/' + song.id + '.mp3')
                     if playlist[index]:
-                        playlist[index].location = os.path.dirname(os.path.abspath(__file__)) + "\\cache\\audio\\" + song.id + ".mp3"
+                        playlist[index].location = os.path.dirname(
+                            os.path.abspath(__file__)) + "\\cache\\audio\\" + song.id + ".mp3"
                     else:
                         print('Song index not found. Song deleted or skipped?')
             time.sleep(1)
@@ -206,6 +207,7 @@ async def on_message(message):
             video_id, video_title, video_duration = yt_downloader.getSongInformation(song_url)
             found_song = Song(video_title, video_id, song_url, video_duration, "", message.author)
             playlist.append(found_song)
+            player.update_queue_file()
 
             m, s = divmod(video_duration, 60)
             h, m = divmod(m, 60)
@@ -225,16 +227,36 @@ async def on_message(message):
                 await client.delete_message(tmp)
 
     elif message.content.startswith('!queue'):
+        sMsg = get_now_playing_message()
+        qMsg = get_queue_message()
+        qMsg_lines = qMsg.split('\n')
+        qMsgs_list = []
+        tmp_list = []
+
         if playlist:
-            sMsg = get_now_playing_message()
-            qMsg = get_queue_message()
-            tmp = await client.send_message(message.channel, sMsg + qMsg)
+            if len(qMsg_lines) > 15:
+                last_index = 0
+                for count, element in enumerate(qMsg_lines, 1):  # Start counting from 1
+                    if count % 10 == 0:
+                        qMsgs_list.append(''.join(qMsg_lines[last_index:count - 1]))
+                        last_index = count
+                tmp_list.append(await client.send_message(message.channel, sMsg))
+                for qPart in qMsgs_list:
+                    tmp_list.append(await client.send_message(message.channel, qPart))
+
+            else:
+                tmp = await client.send_message(message.channel, sMsg + qMsg)
         else:
             tmp = await client.send_message(message.channel,
                                             "Queue is empty. And nothing is playing right now. FeelsWeirdMan")
+
         if auto_del_msg:
             await asyncio.sleep(15)
-            await client.delete_message(tmp)
+            if not tmp_list:
+                await client.delete_message(tmp)
+            else:
+                for tPart in tmp_list:
+                    await client.delete_message(tPart)
 
     elif message.content.startswith('!skip'):
         if playlist:
@@ -449,5 +471,6 @@ __**Commands only available to mods:**__
 For further information visit me on Github (https://github.com/Neolysion/Radio-Kappa)'''
 
     return hMsg
+
 
 client.run(login_token)
