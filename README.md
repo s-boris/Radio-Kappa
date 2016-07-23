@@ -21,6 +21,8 @@ Bot was tested only on Windows 10 x64 and Windows 8 Server x64.
 
 ## Configuration
 
+TODO
+
 ## Usage
 
 __**For everyone available commands:**__
@@ -41,7 +43,6 @@ __**Commands only available to mods:**__
 
 
 __**Known issues:**__
-- Queue does not show when too many songs are queued
 - Bot won't reconnect after losing connection to discord
 
 
