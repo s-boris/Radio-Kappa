@@ -3,8 +3,7 @@ import youtube_dl
 
 def my_hook(d):
     if d['status'] == 'finished':
-        print('Done downloading, now converting ...')
-
+        print('Done downloading, converting ...')
 
 ydl_opts = {
     'format': 'bestaudio/best',
@@ -13,11 +12,6 @@ ydl_opts = {
     'ignoreerrors': True,
     'audioformat': "mp3",
     'outtmpl': '%(id)s',
-    'postprocessors': [{
-        'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
-        'preferredquality': '192',
-    }],
     'progress_hooks': [my_hook],
 }
 
