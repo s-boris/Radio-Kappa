@@ -229,7 +229,7 @@ async def on_message(message):
     elif message.content.startswith('!queue'):
         sMsg = get_now_playing_message()
         qMsg = get_queue_message()
-        qMsg_lines = qMsg.split('\n')
+        qMsg_lines = get_raw_queue_as_string().split('\n')
         qMsgs_list = []
         tmp_list = []
 
@@ -238,7 +238,7 @@ async def on_message(message):
                 last_index = 0
                 for count, element in enumerate(qMsg_lines, 1):  # Start counting from 1
                     if count % 10 == 0:
-                        qMsgs_list.append(''.join(qMsg_lines[last_index:count - 1]))
+                        qMsgs_list.append("```"+"\n".join(qMsg_lines[last_index:count - 1])+"```")
                         last_index = count
                 tmp_list.append(await client.send_message(message.channel, sMsg))
                 for qPart in qMsgs_list:
@@ -433,6 +433,20 @@ def get_now_playing_message():
                playlist[0].requester.display_name + "\n```\n" + \
                playlist[0].url + "\n\n"
     return sMsg
+
+
+def get_raw_queue_as_string():
+    qMsg = ""
+    if playlist:
+        if len(playlist) > 1:
+            for index, song in enumerate(playlist):
+                if not index == 0:
+                    m, s = divmod(playlist[index].duration, 60)
+                    h, m = divmod(m, 60)
+                    duration_string = ("%d:%02d:%02d" % (h, m, s)) if h else ("%02d:%02d" % (m, s))
+                    qMsg += str(
+                        index) + ". " + song.title + " (" + duration_string + ")     Requested by: " + song.requester.display_name + "\n"
+    return qMsg
 
 
 def get_queue_message():
