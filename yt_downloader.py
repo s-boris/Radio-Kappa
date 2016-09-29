@@ -1,5 +1,15 @@
 import youtube_dl
 
+class MyLogger(object):
+    def debug(self, msg):
+        print(msg)
+
+    def warning(self, msg):
+        print(msg)
+
+    def error(self, msg):
+        print(msg)
+
 
 def my_hook(d):
     if d['status'] == 'finished':
@@ -12,6 +22,7 @@ ydl_opts = {
     'ignoreerrors': True,
     'audioformat': "mp3",
     'outtmpl': '%(id)s',
+    'logger': MyLogger(),
     'progress_hooks': [my_hook],
 }
 
