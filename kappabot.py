@@ -481,14 +481,6 @@ async def on_message(message):
             await client.close()
             sys.exit()
 
-    elif message.content.startswith('!snapchat') or (
-            'bulldog' in message.content and 'snapchat' in message.content and '?' in message.content) or (
-            'bulldogs' in message.content and 'snapchat' in message.content and '?' in message.content):
-        tmp = await client.send_message(message.channel, message.author.mention + ' Bulldog\'s snapchat account is: **henrikmongolid**')
-        if auto_del_msg:
-            await asyncio.sleep(10)
-            await client.delete_message(tmp)
-
 def has_mod_access(user):
     has_access = False
     if user.id == owner_id:
