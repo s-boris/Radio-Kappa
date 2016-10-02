@@ -5,7 +5,7 @@ A simple music bot for your Discord server.
 
 ### Requirements:
 
-Bot was tested only on Windows 10 x64 and Windows 8 Server x64.
+Bot was tested only on Windows 10 x64 and Windows Server 2012 x64.
 
 - Python 3.4 or above
 
