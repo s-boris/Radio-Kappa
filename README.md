@@ -14,7 +14,7 @@ Bot was tested only on Windows 10 x64 and Windows 8 Server x64.
 1. Download and unpackage or clone the repository in a desired folder.
 2. Install Python 3.4 and add the Python directory and the "scripts" subdirectory to the path environment variable.
 3. Install pip for Python if not already included.
-4. Download required libraries by typing: `pip install requirements.txt`
+4. Download required libraries by typing: `pip install youtube-dl` and `pip install discord.py[voice]`
 5. Download the latest [ffmpeg codec](https://ffmpeg.zeranoe.com/builds/) and place the three files (ffmpeg.exe, ffplay.exe and ffprobe.exe) in the directory with with the other Radio Kappa files.
 6. Set your bot token and the desired channel id's in the `settings.ini`
 7. To start the bot, double click `run.bat`
