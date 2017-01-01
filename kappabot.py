@@ -40,7 +40,7 @@ config.read('settings.ini')
 
 login_token = config['Login']['Token']
 main_voice_channel_id = config['Autojoin']['Main_Voice_Channel_ID']
-main_text_channel_id = config['Autojoin']['Main_Text_Channel_ID']
+music_text_channel_id = config['Autojoin']['Music_Text_Channel_ID']
 moderator_roles = config['Roles']['Moderator_Rolenames'].split(',')
 owner_id = config['Roles']['Owner_ID']
 
@@ -204,14 +204,14 @@ async def on_ready():
     global player
     global downloader
     global playlist
-    global main_text_channel
+    global music_text_channel
 
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
     print('------')
     vChannel = client.get_channel(main_voice_channel_id)
-    main_text_channel = client.get_channel(main_text_channel_id)
+    music_text_channel = client.get_channel(music_text_channel_id)
     voice_client = await client.join_voice_channel(vChannel)
     if os.path.isfile(q_file):
         with open(q_file, "rb") as f:
@@ -222,7 +222,7 @@ async def on_ready():
     ##Start a new downloader and player
     downloader = Downloader()
     player = Player()
-    await client.send_message(main_text_channel, 'HeyGuys')
+    await client.send_message(music_text_channel, 'HeyGuys')
 
 
 @client.event
@@ -232,202 +232,210 @@ async def on_message(message):
     global auto_del_msg
 
     if message.content.startswith('!play '):
-        search_term = message.content.split("!play ", 1)[1]
-        song_url = None
 
-        ##If its not a youtube link, search in youtube and get the link of the best match
-        if not yt_url_pattern.match(search_term):
-            query_string = urllib.parse.urlencode({"search_query": search_term})
-            html_content = urllib.request.urlopen("http://www.youtube.com/results?" + query_string)
-            search_results = re.findall(r'href=\"\/watch\?v=(.{11})', html_content.read().decode())
-            if search_results:
-                song_url = "http://www.youtube.com/watch?v=" + search_results[0]
-        else:
-            song_url = search_term
+        if(message.channel.id == music_text_channel_id):
+            search_term = message.content.split("!play ", 1)[1]
+            song_url = None
 
-        if song_url:
-            ##Get all needed information from the song url, create a Song object and add it to the queue
-            video_id, video_title, video_duration = yt_downloader.getSongInformation(song_url)
-            found_song = Song(video_title, video_id, song_url, video_duration, "", message.author)
-            m, s = divmod(video_duration, 60)
-            h, m = divmod(m, 60)
-            duration_string = ("\nDuration: %d:%02d:%02d" % (h, m, s)) if h else (
-                "\nDuration: %02d:%02d" % (m, s))
-            if video_duration > 900:
-                tmp = await client.send_message(message.channel,
-                                                message.author.mention + ' I can not add this song to the queue. The maximum duration of a song is 15:00. Please try to add a shorter video.\n\n```"' +
-                                                video_title + '"' + duration_string + "\n```\n" + song_url + "\n\n")
+            ##If its not a youtube link, search in youtube and get the link of the best match
+            if not yt_url_pattern.match(search_term):
+                query_string = urllib.parse.urlencode({"search_query": search_term})
+                html_content = urllib.request.urlopen("http://www.youtube.com/results?" + query_string)
+                search_results = re.findall(r'href=\"\/watch\?v=(.{11})', html_content.read().decode())
+                if search_results:
+                    song_url = "http://www.youtube.com/watch?v=" + search_results[0]
             else:
-                playlist.append(found_song)
-                player.update_queue_file()
+                song_url = search_term
 
+            if song_url:
+                ##Get all needed information from the song url, create a Song object and add it to the queue
+                video_id, video_title, video_duration = yt_downloader.getSongInformation(song_url)
+                found_song = Song(video_title, video_id, song_url, video_duration, "", message.author)
                 m, s = divmod(video_duration, 60)
                 h, m = divmod(m, 60)
                 duration_string = ("\nDuration: %d:%02d:%02d" % (h, m, s)) if h else (
                     "\nDuration: %02d:%02d" % (m, s))
+                if video_duration > 900:
+                    tmp = await client.send_message(message.channel,
+                                                    message.author.mention + ' I can not add this song to the queue. The maximum duration of a song is 15:00. Please try to add a shorter video.\n\n```"' +
+                                                    video_title + '"' + duration_string + "\n```\n" + song_url + "\n\n")
+                else:
+                    playlist.append(found_song)
+                    player.update_queue_file()
+
+                    m, s = divmod(video_duration, 60)
+                    h, m = divmod(m, 60)
+                    duration_string = ("\nDuration: %d:%02d:%02d" % (h, m, s)) if h else (
+                        "\nDuration: %02d:%02d" % (m, s))
+                    tmp = await client.send_message(message.channel,
+                                                    message.author.mention + ' The following song was added to the queue:\n\n```"' +
+                                                    video_title + '"' + duration_string + "\n```\n" + song_url + "\n\n")
+                if auto_del_msg:
+                    await asyncio.sleep(10)
+                    await client.delete_message(tmp)
+            else:
                 tmp = await client.send_message(message.channel,
-                                                message.author.mention + ' The following song was added to the queue:\n\n```"' +
-                                                video_title + '"' + duration_string + "\n```\n" + song_url + "\n\n")
+                                                message.author.mention + " Sorry, couldn't find a matching song. FeelsBadMan \nTry to call !play with your desired youtube link.")
+                if auto_del_msg:
+                    await asyncio.sleep(5)
+                    await client.delete_message(tmp)
+
+    elif message.content.startswith('!queue'):
+        if (message.channel.id == music_text_channel_id):
+            sMsg = get_now_playing_message()
+            qMsg = get_queue_message()
+            qMsg_lines = get_raw_queue_as_string().split('\n')
+            qMsgs_list = []
+            tmp_list = []
+
+            if playlist:
+                if len(qMsg_lines) > 15:
+                    last_index = 0
+                    for count, element in enumerate(qMsg_lines, 1):  # Start counting from 1
+                        if count % 10 == 0:
+                            qMsgs_list.append("```" + "\n".join(qMsg_lines[last_index:count - 1]) + "```")
+                            last_index = count
+                    tmp_list.append(await client.send_message(message.channel, sMsg))
+                    for qPart in qMsgs_list:
+                        tmp_list.append(await client.send_message(message.channel, qPart))
+
+                else:
+                    tmp = await client.send_message(message.channel, sMsg + qMsg)
+            else:
+                tmp = await client.send_message(message.channel,
+                                                "Queue is empty. And nothing is playing right now. FeelsWeirdMan")
+
+            if auto_del_msg:
+                await asyncio.sleep(15)
+                if not tmp_list:
+                    await client.delete_message(tmp)
+                else:
+                    for tPart in tmp_list:
+                        await client.delete_message(tPart)
+
+    elif message.content.startswith('!skip'):
+        if (message.channel.id == music_text_channel_id):
+            if playlist:
+                if playlist[0].requester.id == message.author.id or has_mod_access(message.author):
+                    player.skip()
+                    tmp = await client.send_message(message.channel, "Skipping...")
+                else:
+                    tmp = await client.send_message(message.channel,
+                                                    message.author.mention + " Sorry, you are not allowed to skip the current song.")
+            else:
+                tmp = await client.send_message(message.channel, "There is no song playing right now.")
+            if auto_del_msg:
+                await asyncio.sleep(3)
+                await client.delete_message(tmp)
+
+    elif message.content.startswith('!clearqueue'):
+        if (message.channel.id == music_text_channel_id):
+            if playlist:
+                if has_mod_access(message.author):
+                    del playlist[1:]
+                    player.update_queue_file()
+                    tmp = await client.send_message(message.channel, "Queue cleared!")
+                else:
+                    tmp = await client.send_message(message.channel,
+                                                    message.author.mention + " You are not allowed to use this command.")
+            else:
+                tmp = await client.send_message(message.channel, "Queue is already empty.")
+            if auto_del_msg:
+                await asyncio.sleep(3)
+                await client.delete_message(tmp)
+
+    elif message.content.startswith('!song'):
+        if (message.channel.id == music_text_channel_id):
+            tmp = await client.send_message(message.channel, get_now_playing_message())
             if auto_del_msg:
                 await asyncio.sleep(10)
                 await client.delete_message(tmp)
-        else:
-            tmp = await client.send_message(message.channel,
-                                            message.author.mention + " Sorry, couldn't find a matching song. FeelsBadMan \nTry to call !play with your desired youtube link.")
-            if auto_del_msg:
-                await asyncio.sleep(5)
-                await client.delete_message(tmp)
-
-    elif message.content.startswith('!queue'):
-        sMsg = get_now_playing_message()
-        qMsg = get_queue_message()
-        qMsg_lines = get_raw_queue_as_string().split('\n')
-        qMsgs_list = []
-        tmp_list = []
-
-        if playlist:
-            if len(qMsg_lines) > 15:
-                last_index = 0
-                for count, element in enumerate(qMsg_lines, 1):  # Start counting from 1
-                    if count % 10 == 0:
-                        qMsgs_list.append("```" + "\n".join(qMsg_lines[last_index:count - 1]) + "```")
-                        last_index = count
-                tmp_list.append(await client.send_message(message.channel, sMsg))
-                for qPart in qMsgs_list:
-                    tmp_list.append(await client.send_message(message.channel, qPart))
-
-            else:
-                tmp = await client.send_message(message.channel, sMsg + qMsg)
-        else:
-            tmp = await client.send_message(message.channel,
-                                            "Queue is empty. And nothing is playing right now. FeelsWeirdMan")
-
-        if auto_del_msg:
-            await asyncio.sleep(15)
-            if not tmp_list:
-                await client.delete_message(tmp)
-            else:
-                for tPart in tmp_list:
-                    await client.delete_message(tPart)
-
-    elif message.content.startswith('!skip'):
-        if playlist:
-            if playlist[0].requester.id == message.author.id or has_mod_access(message.author):
-                player.skip()
-                tmp = await client.send_message(message.channel, "Skipping...")
-            else:
-                tmp = await client.send_message(message.channel,
-                                                message.author.mention + " Sorry, you are not allowed to skip the current song.")
-        else:
-            tmp = await client.send_message(message.channel, "There is no song playing right now.")
-        if auto_del_msg:
-            await asyncio.sleep(3)
-            await client.delete_message(tmp)
-
-    elif message.content.startswith('!clearqueue'):
-        if playlist:
-            if has_mod_access(message.author):
-                del playlist[1:]
-                player.update_queue_file()
-                tmp = await client.send_message(message.channel, "Queue cleared!")
-            else:
-                tmp = await client.send_message(message.channel,
-                                                message.author.mention + " You are not allowed to use this command.")
-        else:
-            tmp = await client.send_message(message.channel, "Queue is already empty.")
-        if auto_del_msg:
-            await asyncio.sleep(3)
-            await client.delete_message(tmp)
-
-    elif message.content.startswith('!song'):
-        tmp = await client.send_message(message.channel, get_now_playing_message())
-        if auto_del_msg:
-            await asyncio.sleep(10)
-            await client.delete_message(tmp)
 
     elif message.content.startswith('!removeall'):
-        msg = ""
-        ##If command is !removeall <mention>
-        if len(message.content.split("!removeall ", 1)) > 1:
-            if message.content.split("!removeall ", 1)[1]:
-                user_mention = message.content.split("!removeall ", 1)[1]
-                if message.author.mention == user_mention or has_mod_access(message.author):
-                    if playlist:
-                        for index, song in enumerate(playlist):
-                            if song.requester.mention == user_mention:
-                                if not index == 0:
-                                    del playlist[index]
-                                    msg = 'Removed all songs requested by ' + user_mention + ' from the queue.'
-                        if not msg:
-                            msg = message.author.mention + ', ' + user_mention + ' has no songs in queue.'
+        if (message.channel.id == music_text_channel_id):
+            msg = ""
+            ##If command is !removeall <mention>
+            if len(message.content.split("!removeall ", 1)) > 1:
+                if message.content.split("!removeall ", 1)[1]:
+                    user_mention = message.content.split("!removeall ", 1)[1]
+                    if message.author.mention == user_mention or has_mod_access(message.author):
+                        if playlist:
+                            for index, song in enumerate(playlist):
+                                if song.requester.mention == user_mention:
+                                    if not index == 0:
+                                        del playlist[index]
+                                        msg = 'Removed all songs requested by ' + user_mention + ' from the queue.'
+                            if not msg:
+                                msg = message.author.mention + ', ' + user_mention + ' has no songs in queue.'
+                        else:
+                            msg = message.author.mention + " Queue is empty, nothing to remove."
                     else:
-                        msg = message.author.mention + " Queue is empty, nothing to remove."
-                else:
-                    msg = message.author.mention + " You can not remove songs, requested by other people."
-        ##If command is without mention
-        else:
-            if playlist:
-                for index, song in enumerate(playlist):
-                    if song.requester.mention == message.author.mention:
-                        if not index == 0:
-                            del playlist[index]
-                            msg = message.author.mention + ' Removed all your songs from the queue.'
-                if not msg:
-                    msg = message.author.mention + ' You have no songs in queue.'
+                        msg = message.author.mention + " You can not remove songs, requested by other people."
+            ##If command is without mention
             else:
-                msg = message.author.mention + " Queue is empty, nothing to remove."
-        tmp = await client.send_message(message.channel, msg)
-        if auto_del_msg:
-            await asyncio.sleep(15)
-            await client.delete_message(tmp)
+                if playlist:
+                    for index, song in enumerate(playlist):
+                        if song.requester.mention == message.author.mention:
+                            if not index == 0:
+                                del playlist[index]
+                                msg = message.author.mention + ' Removed all your songs from the queue.'
+                    if not msg:
+                        msg = message.author.mention + ' You have no songs in queue.'
+                else:
+                    msg = message.author.mention + " Queue is empty, nothing to remove."
+            tmp = await client.send_message(message.channel, msg)
+            if auto_del_msg:
+                await asyncio.sleep(15)
+                await client.delete_message(tmp)
 
     elif message.content.startswith('!remove'):
-        msg = ""
-        ##If command is !remove <mention>
-        if len(message.content.split("!remove ", 1)) > 1:
-            if message.content.split("!remove ", 1)[1]:
-                user_mention = message.content.split("!remove ", 1)[1]
-                if message.author.mention == user_mention or has_mod_access(message.author):
+        if (message.channel.id == music_text_channel_id):
+            msg = ""
+            ##If command is !remove <mention>
+            if len(message.content.split("!remove ", 1)) > 1:
+                if message.content.split("!remove ", 1)[1]:
                     user_mention = message.content.split("!remove ", 1)[1]
-                    if playlist:
-                        removed_one = False
-                        r_playlist = list(reversed(playlist))
-                        for index, song in enumerate(r_playlist):
-                            ##the last song is the first, so the one currently playing
-                            if not index == len(r_playlist) - 1:
-                                if song.requester.mention == user_mention:
-                                    if not removed_one:
-                                        del r_playlist[index]
-                                        removed_one = True
-                                        playlist = list(reversed(r_playlist))
-                                        msg = 'Removed "' + song.title + '", requested by: ' + song.requester.mention + ' from queue.'
-                        if not msg:
-                            msg = message.author.mention + " Could not find any songs from " + user_mention + " in the queue."
+                    if message.author.mention == user_mention or has_mod_access(message.author):
+                        user_mention = message.content.split("!remove ", 1)[1]
+                        if playlist:
+                            removed_one = False
+                            r_playlist = list(reversed(playlist))
+                            for index, song in enumerate(r_playlist):
+                                ##the last song is the first, so the one currently playing
+                                if not index == len(r_playlist) - 1:
+                                    if song.requester.mention == user_mention:
+                                        if not removed_one:
+                                            del r_playlist[index]
+                                            removed_one = True
+                                            playlist = list(reversed(r_playlist))
+                                            msg = 'Removed "' + song.title + '", requested by: ' + song.requester.mention + ' from queue.'
+                            if not msg:
+                                msg = message.author.mention + " Could not find any songs from " + user_mention + " in the queue."
+                        else:
+                            msg = message.author.mention + " Queue is empty, nothing to remove."
                     else:
-                        msg = message.author.mention + " Queue is empty, nothing to remove."
-                else:
-                    msg = message.author.mention + " You are not allowed to use this command."
-        ##If command is without mention
-        else:
-            if playlist:
-                removed_one = False
-                r_playlist = list(reversed(playlist))
-                for index, song in enumerate(r_playlist):
-                    if not index == len(r_playlist) - 1:
-                        if song.requester.id == message.author.id:
-                            if not removed_one:
-                                del r_playlist[index]
-                                removed_one = True
-                                playlist = list(reversed(r_playlist))
-                                msg = 'Removed "' + song.title + '", requested by: ' + song.requester.mention + ' from queue.'
-                if not msg:
-                    msg = message.author.mention + " Could not find any song that was requested by you in queue."
+                        msg = message.author.mention + " You are not allowed to use this command."
+            ##If command is without mention
             else:
-                msg = message.author.mention + " Queue is empty, nothing to remove."
-        tmp = await client.send_message(message.channel, msg)
-        if auto_del_msg:
-            await asyncio.sleep(15)
-            await client.delete_message(tmp)
+                if playlist:
+                    removed_one = False
+                    r_playlist = list(reversed(playlist))
+                    for index, song in enumerate(r_playlist):
+                        if not index == len(r_playlist) - 1:
+                            if song.requester.id == message.author.id:
+                                if not removed_one:
+                                    del r_playlist[index]
+                                    removed_one = True
+                                    playlist = list(reversed(r_playlist))
+                                    msg = 'Removed "' + song.title + '", requested by: ' + song.requester.mention + ' from queue.'
+                    if not msg:
+                        msg = message.author.mention + " Could not find any song that was requested by you in queue."
+                else:
+                    msg = message.author.mention + " Queue is empty, nothing to remove."
+            tmp = await client.send_message(message.channel, msg)
+            if auto_del_msg:
+                await asyncio.sleep(15)
+                await client.delete_message(tmp)
 
     elif message.content.startswith('!autoremove'):
         msg = ''
@@ -456,12 +464,12 @@ async def on_message(message):
             await client.delete_message(tmp)
 
     elif message.content.startswith('!help'):
+        if (message.channel.id == music_text_channel_id):
+            tmp = await client.send_message(message.channel, get_help_message())
 
-        tmp = await client.send_message(message.channel, get_help_message())
-
-        if auto_del_msg:
-            await asyncio.sleep(30)
-            await client.delete_message(tmp)
+            if auto_del_msg:
+                await asyncio.sleep(30)
+                await client.delete_message(tmp)
 
     elif message.content.startswith('!flip '):
 
@@ -480,14 +488,6 @@ async def on_message(message):
             await voice_client.disconnect()
             await client.close()
             sys.exit()
-
-    elif message.content.startswith('!snapchat') or (
-            'bulldog' in message.content and 'snapchat' in message.content and '?' in message.content) or (
-            'bulldogs' in message.content and 'snapchat' in message.content and '?' in message.content):
-        tmp = await client.send_message(message.channel, message.author.mention + ' Bulldog\'s snapchat account is: **henrikmongolid**')
-        if auto_del_msg:
-            await asyncio.sleep(10)
-            await client.delete_message(tmp)
 
 def has_mod_access(user):
     has_access = False
