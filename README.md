@@ -14,7 +14,7 @@ Bot was tested only on Windows 10 x64 and Windows 8 Server x64.
 1. Download and unpackage or clone the repository in a desired folder.
 2. Install Python 3.4 and add the Python directory and the "scripts" subdirectory to the path environment variable.
 3. Install pip for Python if not already included.
-4. Download required libraries by typing: `pip install -r requirements.txt`
+4. Download required libraries by typing: `pip install requirements.txt`
 5. Download the latest ffmpeg codec and place the three files (ffmpeg.exe, ffplay.exe and ffprobe.exe) in the directory with with the other Radio Kappa files.
 6. Set your bot token and the desired channel id's in the `settings.ini`
 7. To start the bot, double click `run.bat`
@@ -33,15 +33,13 @@ __**For everyone available commands:**__
 **!queue**                                                         -    Shows a list with all queued songs
 **!skip**                                                             -    Skips the current song (You can only use this command if the song currently playing was requested by you)*(Mods have full acccess to this command)*
 **!remove**                                                      -    Removes the last added song by you. (You can execute this multiple times)
-**!removeall**                                                  -    Removes all your songs in the queue.
-**!flip <mention>**                                         -    Flip this cuck!
+**!removeall**                                                  -    Removes all your songs in the queue.                                  -    Flip this cuck!
 
 __**Commands only available to mods:**__
 
 **!remove** \<user mention>                        -    Removes the last song that was requested by the mentioned user. (You can execute this multiple times)
 **!removeall** \<user mention>                    -    Removes all songs that were requested by the mentioned user
 **!autoremove** \<true or false>                  -    Enables/Disables the auto removing of the bots messages after some time
-**!clearqueue**                                                -    Removes all songs from the queue
 **!clearqueue**                                                -    Removes all songs from the queue
 **!restart**                                                        -    Restart the bot
 
