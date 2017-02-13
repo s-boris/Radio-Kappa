@@ -9,7 +9,7 @@ Bot was tested only on Windows 10 x64 and Windows 8 Server x64.
 
 - Python 3.4 or above
 
-### Installation
+## Installation
 
 1. Download and unpackage or clone the repository in a desired folder.
 2. Install Python 3.4 and add the Python directory and the "scripts" subdirectory to the path environment variable.
