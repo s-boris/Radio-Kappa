@@ -158,7 +158,7 @@ class Player(object):
     def run(self):
         while True:
             self.play()
-            time.sleep(0.5)
+            time.sleep(1)
 
 
 # YT downloader stuff
