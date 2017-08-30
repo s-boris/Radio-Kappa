@@ -52,8 +52,12 @@ def remove_file(file):
 def load_queue_file():
     # check for queue file
     if os.path.isfile("queue.dat"):
-        with open("queue.dat", "rb") as f:
-            return pickle.load(f)
+        try:
+            with open("queue.dat", "rb") as f:
+                return pickle.load(f)
+        except EOFError:
+            print("EOFError: File seems to be empty...")
+            return []
     else:
         print('No old queue data found, starting with new queue.')
         return update_queue_file([])
